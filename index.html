@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <!-- スマホでの拡大縮小を禁止 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ワンちゃんムイムイ アプリ (プロトタイプ)</title>
-    <!-- ジェスチャー操作を簡単にするライブラリ Hammer.js を読み込み -->
+    <title>ワンちゃんムイムイ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     
     <style>
@@ -12,294 +12,238 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%;
-            background-color: #e0f7fa; /* リラックスできる優しい背景色 */
+            height: 100vh;
+            background-color: #fdf6e3; /* 優しいクリーム色の背景 */
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; /* 画面外のスクロールを禁止 */
-            /* スマホでのデフォルトのスクロールやズームを完全に無効化し、アプリの操作に専念させる */
+            overflow: hidden;
+            
+            /* CRITICAL: ブラウザ標準のタッチ操作（スクロール、ズームなど）を完全に無効化 */
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
         }
 
-        /* ワンちゃんのコンテナ */
+        /* ワンちゃん全体を包むコンテナ */
         #dog-container {
             position: relative;
-            width: 250px;
-            height: 250px;
+            width: 200px;
+            height: 200px;
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 普段はゆっくりと呼吸しているようなアニメーション */
-            animation: breathe 3s infinite ease-in-out;
+            
+            /* コンテナ自身もタッチ操作のデフォルトを無効化 */
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            
+            /* 変形時の基準点を中央下部に（ジャンプなどを自然にするため） */
+            transform-origin: center bottom;
         }
 
-        /* アニメーション付きで元の位置・形に戻るためのクラス（バネのような動き） */
-        .spring-back {
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        /* ワンちゃんの体（おもちのような形） */
-        .dog-body {
-            position: relative;
-            width: 200px;
-            height: 160px;
-            background-color: #f5deb3; /* 優しいクリーム色 */
-            border-radius: 45% 45% 40% 40% / 50% 50% 45% 45%; /* 少し潰れた丸 */
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1), inset -10px -10px 20px rgba(0,0,0,0.05);
+        /* 体 */
+        .body {
+            position: absolute;
+            width: 160px;
+            height: 140px;
+            background-color: #f4a460; /* 柴犬のような茶色 */
+            border-radius: 50% 50% 45% 45%;
+            box-shadow: inset -10px -15px 20px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.15);
+            z-index: 2;
         }
 
         /* 耳 */
         .ear {
             position: absolute;
-            width: 70px;
-            height: 90px;
-            background-color: #deb887; /* 少し濃い茶色 */
-            border-radius: 50%;
+            width: 60px;
+            height: 80px;
+            background-color: #d2691e;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
             top: 20px;
-            z-index: -1;
+            z-index: 1;
         }
         .ear.left {
-            left: -20px;
+            left: -15px;
             transform: rotate(-30deg);
         }
         .ear.right {
-            right: -20px;
+            right: -15px;
             transform: rotate(30deg);
         }
 
-        /* 顔のパーツ群 */
+        /* 顔パーツのコンテナ */
         .face {
             position: absolute;
             width: 100%;
             height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none; /* 顔パーツ自体がタッチを邪魔しないようにする */
+            z-index: 3;
         }
 
         /* 目 */
         .eye {
             position: absolute;
-            top: 60px;
-            width: 12px;
-            height: 12px;
+            top: 55px;
+            width: 14px;
+            height: 14px;
             background-color: #333;
             border-radius: 50%;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
-        .eye.left { left: 55px; }
-        .eye.right { right: 55px; }
+        .eye.left { left: 40px; }
+        .eye.right { right: 40px; }
 
         /* 鼻 */
         .nose {
             position: absolute;
-            top: 80px;
+            top: 75px;
             left: 50%;
             transform: translateX(-50%);
-            width: 20px;
-            height: 14px;
-            background-color: #4a3b32;
-            border-radius: 50% 50% 40% 40%;
+            width: 24px;
+            height: 16px;
+            background-color: #222;
+            border-radius: 50% 50% 60% 60%;
         }
 
-        /* ほっぺた */
-        .cheek {
-            position: absolute;
-            top: 70px;
-            width: 25px;
-            height: 15px;
-            background-color: rgba(255, 105, 180, 0.4);
-            border-radius: 50%;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .cheek.left { left: 30px; }
-        .cheek.right { right: 30px; }
-
-        /* なでられた時の「嬉しい顔」状態 */
+        /* パン操作時（なでなで）の笑顔状態 */
         .is-happy .eye {
-            height: 0px;
-            width: 16px;
-            border-top: 4px solid #333;
-            background-color: transparent;
-            border-radius: 50%;
-            margin-top: 6px;
-        }
-        .is-happy .cheek {
-            opacity: 1;
+            height: 4px; /* 目が細くなる */
+            border-radius: 10px;
+            transform: translateY(5px);
         }
 
-        /* タップされた時のアニメーション */
-        @keyframes bounceTap {
-            0% { transform: scale(1); }
-            30% { transform: scale(0.9, 1.1) translateY(-10px); }
-            60% { transform: scale(1.05, 0.95) translateY(5px); }
-            100% { transform: scale(1) translateY(0); }
-        }
-        .is-bouncing {
-            animation: bounceTap 0.4s ease-out;
+        /* トランジション（バネのような滑らかな戻り） */
+        .spring-back {
+            /* cubic-bezierを使って、ぽよんと弾むような戻り方を実現 */
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        /* 待機中の呼吸アニメーション */
-        @keyframes breathe {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02, 0.98); }
-            100% { transform: scale(1); }
+        /* タップ時のジャンプアニメーション */
+        @keyframes jump {
+            0%   { transform: translateY(0) scale(1, 1); }
+            30%  { transform: translateY(-30px) scale(0.9, 1.1); }
+            60%  { transform: translateY(0) scale(1.05, 0.95); }
+            100% { transform: translateY(0) scale(1, 1); }
+        }
+        .is-jumping {
+            animation: jump 0.5s ease-out;
         }
 
-        /* 遊び方の説明テキスト */
-        .instruction {
+        /* 遊び方テキスト */
+        .instructions {
             position: absolute;
-            bottom: 40px;
-            text-align: center;
-            color: #555;
+            bottom: 30px;
+            color: #888;
             font-family: sans-serif;
-            font-size: 14px;
-            pointer-events: none;
-            opacity: 0.8;
+            text-align: center;
+            line-height: 1.5;
+            pointer-events: none; /* テキストへのタッチを無効化 */
         }
     </style>
 </head>
 <body>
 
     <div id="dog-container" class="spring-back">
-        <div class="dog-body" id="dog-body">
-            <!-- 左耳・右耳 -->
-            <div class="ear left"></div>
-            <div class="ear right"></div>
-            <!-- 顔 -->
+        <div class="ear left"></div>
+        <div class="ear right"></div>
+        <div class="body" id="dog-body">
             <div class="face">
                 <div class="eye left"></div>
                 <div class="eye right"></div>
                 <div class="nose"></div>
-                <div class="cheek left"></div>
-                <div class="cheek right"></div>
             </div>
         </div>
     </div>
 
-    <div class="instruction">
-        タップ・なでる（スワイプ）<br>
-        つまむ（ピンチ）・弾く（フリック）<br>
-        で遊んでみてね！
+    <div class="instructions">
+        タップ：ジャンプ<br>
+        なぞる（パン）：気持ちよくて目を細める<br>
+        つまむ・広げる（ピンチ）：伸び縮みする<br>
+        弾く（スワイプ）：スライディング
     </div>
 
     <script>
         const dogContainer = document.getElementById('dog-container');
         const dogBody = document.getElementById('dog-body');
-        
-        // 変形の状態を保持する変数
-        let transformState = {
-            x: 0,
-            y: 0,
-            scale: 1
-        };
 
-        // Hammer.jsのインスタンスを作成
-        const mc = new Hammer.Manager(dogContainer);
+        // Hammerインスタンスを作成。デフォルトでtap, doubletap, pan, swipe, pressが有効
+        const mc = new Hammer(dogContainer);
 
-        // 認識したいジェスチャーを追加・設定
-        // パン（なでる、引きずる）: 全方向許可
-        mc.add(new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }));
-        // ピンチ（つまむ、広げる）: デフォルトでは無効なので有効化
-        mc.add(new Hammer.Pinch({ enable: true }));
-        // スワイプ（弾く）: 全方向許可
-        mc.add(new Hammer.Swipe({ direction: Hammer.DIRECTION_ALL }));
-        // タップ
-        mc.add(new Hammer.Tap({ taps: 1 }));
+        // CRITICAL: ピンチ（つまむ・広げる）はデフォルトで無効なので、明示的に有効化する
+        mc.get('pinch').set({ enable: true });
 
-        // ピンチとパンを同時に認識できるように設定
-        mc.get('pinch').recognizeWith(mc.get('pan'));
+        // ジェスチャー状態を管理する変数
+        let currentScale = 1;
 
-        // ワンちゃんの見た目（位置・サイズ）を更新する関数
-        function updateTransform() {
-            const transformString = `translate(${transformState.x}px, ${transformState.y}px) scale(${transformState.scale})`;
-            dogContainer.style.transform = transformString;
-        }
-
-        // 定位置・元の形に戻す関数
+        // 共通：操作が終わった時に元の位置・形にバネのように戻す関数
         function resetDog() {
-            transformState.x = 0;
-            transformState.y = 0;
-            transformState.scale = 1;
-            
-            // バネのように戻るアニメーションクラスを付与
             dogContainer.classList.add('spring-back');
+            dogContainer.style.transform = `translate(0px, 0px) scale(1)`;
             dogBody.classList.remove('is-happy');
-            
-            updateTransform();
         }
 
-        // 1. タップ（ちょんっ）
+        // 1. タップ：軽くジャンプする
         mc.on('tap', function(ev) {
-            // アニメーションを再スタートさせるための処理
-            dogContainer.classList.remove('is-bouncing');
-            void dogContainer.offsetWidth; // リフローを強制してアニメーションをリセット
-            dogContainer.classList.add('is-bouncing');
-            
-            // 少しの間だけ嬉しい顔になる
-            dogBody.classList.add('is-happy');
-            setTimeout(() => {
-                dogBody.classList.remove('is-happy');
-            }, 500);
+            // クラスを付け直すことでアニメーションを再実行
+            dogContainer.classList.remove('is-jumping');
+            void dogContainer.offsetWidth; // リフローを強制
+            dogContainer.classList.add('is-jumping');
         });
 
-        // 2. パン（なでる、引っ張る）
+        // 2. パン（なでなで）：目を細めて幸せそうにする
         mc.on('panstart panmove', function(ev) {
-            // 操作中は戻るアニメーションを切る（指に吸い付かせるため）
-            dogContainer.classList.remove('spring-back');
-            
-            // 撫でられているので嬉しい顔にする
+            // スワイプとの競合を防ぐため、ゆっくりなぞった時だけ反応
             dogBody.classList.add('is-happy');
-
-            // 指の動きに合わせて少しだけ動く（追従しすぎないように減衰させる）
-            transformState.x = ev.deltaX * 0.4;
-            transformState.y = ev.deltaY * 0.4;
-            updateTransform();
+            
+            // 指に合わせて少しだけ位置をずらす（ムイムイ感）
+            dogContainer.classList.remove('spring-back');
+            const moveX = ev.deltaX * 0.3;
+            const moveY = ev.deltaY * 0.3;
+            dogContainer.style.transform = `translate(${moveX}px, ${moveY}px) scale(${currentScale})`;
         });
 
         mc.on('panend pancancel', function(ev) {
-            // 指が離れたら元に戻す
             resetDog();
         });
 
-        // 3. ピンチ（つまむ・広げる）
+        // 3. ピンチ（つまむ・広げる）：スケールを変える
         mc.on('pinchstart pinchmove', function(ev) {
             dogContainer.classList.remove('spring-back');
             
-            // スケールを指の間隔に合わせる（極端に小さく/大きくならないように制限）
-            let newScale = ev.scale;
-            if (newScale < 0.5) newScale = 0.5; // 最小サイズ
-            if (newScale > 2.0) newScale = 2.0; // 最大サイズ
+            // event.scale を使って大きさを変更
+            currentScale = ev.scale;
             
-            transformState.scale = newScale;
-            updateTransform();
+            // 極端に大きくなったり小さくなったりしないよう制限
+            if (currentScale < 0.4) currentScale = 0.4;
+            if (currentScale > 2.5) currentScale = 2.5;
+            
+            dogContainer.style.transform = `scale(${currentScale})`;
         });
 
         mc.on('pinchend pinchcancel', function(ev) {
+            currentScale = 1;
             resetDog();
         });
 
-        // 4. スワイプ・フリック（弾く）
+        // 4. スワイプ（フリック）：弾き飛ばされて戻ってくる
         mc.on('swipe', function(ev) {
             dogContainer.classList.remove('spring-back');
             
-            // 弾かれた方向に大きく吹き飛ぶ（速度に比例）
-            const force = Math.min(Math.abs(ev.velocity) * 150, 400); 
-            transformState.x = ev.velocityX * force;
-            transformState.y = ev.velocityY * force;
+            // 弾かれた方向へ大きくスライド（translateX/Y）
+            const force = 300; 
+            const slideX = ev.velocityX * force;
+            const slideY = ev.velocityY * force;
             
-            // びっくりした顔（今回は嬉しい顔の解除）
-            dogBody.classList.remove('is-happy');
-            updateTransform();
-
-            // 少し経ったら猛ダッシュで元の位置に戻ってくる
+            // スピード感を出すためにトランジションを上書き
+            dogContainer.style.transition = 'transform 0.2s ease-out';
+            dogContainer.style.transform = `translate(${slideX}px, ${slideY}px)`;
+            
+            // 少し経ったら中央にポヨンと戻る
             setTimeout(() => {
-                resetDog();
-            }, 300);
+                dogContainer.style.transition = ''; // カスタムトランジションを消す
+                resetDog(); // spring-back クラスのトランジションで戻る
+            }, 250);
         });
 
     </script>
